@@ -3,6 +3,8 @@ package com.microservice.user.management.service.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Optional;
+
 import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,17 @@ public class UserService {
 
     public AuthResponse register(RegisterRequest request) {
         log.info("Registering new user: {}", request.username());
+        
+        Optional<User> existingUser = userRepository.findByUsername(request.username());
+        if (existingUser.isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+
+        Optional<User> existingEmail = userRepository.findByEmail(request.email());
+        if (existingEmail.isPresent()) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+        
         User user = User.builder()
                 .firstName(request.firstName())
                 .lastName(request.lastName())
