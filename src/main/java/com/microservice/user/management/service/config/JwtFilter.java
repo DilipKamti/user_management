@@ -5,6 +5,7 @@ import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -24,19 +25,31 @@ public class JwtFilter extends OncePerRequestFilter {
 	private final JwtService jwtService;
 	private final UserRepository userRepository;
 
+	@Value("${skip-auth-endpoints}")
+    private String skipEnpoints;
+
+	private List<String> skipAuthEndpoints;
+
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 		HttpServletRequest httpRequest = (HttpServletRequest) request;
 
-		String path = httpRequest.getRequestURI();
-		log.info("================> {}", path);
+		// Initialize skip list if not already done
+        if (skipAuthEndpoints == null) {
+            skipAuthEndpoints = List.of(skipEnpoints.split("\\s*,\\s*"));
+        }
 
-		// ✅ Skip auth endpoints (like /auth/register or /auth/login)
-		if (path.startsWith("/auth")) {
-			filterChain.doFilter(request, response);
-			return;
-		}
+
+		String path = httpRequest.getRequestURI();
+		log.info("➡️ Incoming request: {}", path);
+
+        // ✅ Skip endpoints matching the configured list
+        if (skipAuthEndpoints.stream().anyMatch(path::startsWith)) {
+            log.info("⏭️ Skipping JWT filter for public endpoint: {}", path);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
 		String auth = httpRequest.getHeader("Authorization");
 

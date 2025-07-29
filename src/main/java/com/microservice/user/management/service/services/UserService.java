@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import com.microservice.user.management.service.dto.AuthResponse;
 import com.microservice.user.management.service.dto.LoginRequest;
@@ -56,13 +57,15 @@ public class UserService {
 
     public AuthResponse login(LoginRequest request) {
         log.info("Authenticating user: {}", request.username());
+
+        User user = userRepository.findByUsername(request.username())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + request.username()));
+        log.info("User found: {}", request.username());
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
-
-        User user = userRepository.findByUsername(request.username()).orElseThrow();
-        log.info("User found: {}", request.username());
-
+        
         String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
         return new AuthResponse(token);
     }
