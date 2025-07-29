@@ -59,6 +59,13 @@ public class JwtFilter extends OncePerRequestFilter {
 				String username = jwtService.extractUsername(token);
 				String role = jwtService.extractRole(token);
 
+				// ✅ Validate that user actually exists in DB
+				if (userRepository.findByUsername(username).isEmpty()) {
+					log.warn("User {} not found in database. Token is invalid.", username);
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+					return;
+				}
+
 				log.info("Setting security context for user: {}, role: {}", username, role);
 
 				UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
